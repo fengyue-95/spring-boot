@@ -43,17 +43,20 @@ public @interface ConditionalOnWebApplication {
 	 * The required type of the web application.
 	 * @return the required web application type
 	 */
+	//所需的web的应用类型
 	Type type() default Type.ANY;
 
 	/**
 	 * Available application types.
 	 */
+	//可选应用类型枚举
 	enum Type {
 
 		/**
 		 * Any web application will match.
 		 */
 		ANY,
+
 
 		/**
 		 * Only servlet-based web application will match.
