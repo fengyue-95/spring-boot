@@ -268,16 +268,23 @@ public class SpringApplication {
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		//推断web应用类型
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+		//加载并初始化ApplicationContextInitializer及相关实现类
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		//加载并初始化ApplicationListener及相关实现类
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+		//推断main方法class类
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
 	private Class<?> deduceMainApplicationClass() {
 		try {
+			//获取栈元素数组
 			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
+			//遍历栈元素数组
 			for (StackTraceElement stackTraceElement : stackTrace) {
+				//匹配第一个main方法并返回
 				if ("main".equals(stackTraceElement.getMethodName())) {
 					return Class.forName(stackTraceElement.getClassName());
 				}
@@ -423,6 +430,7 @@ public class SpringApplication {
 	private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
 		ClassLoader classLoader = getClassLoader();
 		// Use names and ensure unique to protect against duplicates
+		//使用SpringFactoriesLoader类的loadFactoryNames方法获取spring.factories文件中注册的对应配置
 		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
 		AnnotationAwareOrderComparator.sort(instances);
@@ -433,11 +441,14 @@ public class SpringApplication {
 	private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
 			ClassLoader classLoader, Object[] args, Set<String> names) {
 		List<T> instances = new ArrayList<>(names.size());
+		//遍历加载到的类名
 		for (String name : names) {
 			try {
 				Class<?> instanceClass = ClassUtils.forName(name, classLoader);
 				Assert.isAssignable(type, instanceClass);
+				//获取有参构造器
 				Constructor<?> constructor = instanceClass.getDeclaredConstructor(parameterTypes);
+				//创建对象
 				T instance = (T) BeanUtils.instantiateClass(constructor, args);
 				instances.add(instance);
 			}
@@ -1223,6 +1234,7 @@ public class SpringApplication {
 	 * @return the running {@link ApplicationContext}
 	 */
 	public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+		//创建SpringApplication对象并执行其run方法
 		return new SpringApplication(primarySources).run(args);
 	}
 
