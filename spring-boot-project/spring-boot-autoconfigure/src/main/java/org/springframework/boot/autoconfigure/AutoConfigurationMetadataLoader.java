@@ -39,6 +39,7 @@ final class AutoConfigurationMetadataLoader {
 	}
 
 	static AutoConfigurationMetadata loadMetadata(ClassLoader classLoader) {
+		//默认加载元数据的路径 "META-INF/spring-autoconfigure-metadata.properties";
 		return loadMetadata(classLoader, PATH);
 	}
 
