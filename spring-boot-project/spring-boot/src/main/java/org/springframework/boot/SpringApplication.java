@@ -342,6 +342,7 @@ public class SpringApplication {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
 			//通知监听器，容器启动完成
+			// 当applicationcontext刷新并启动之后，commandrunner和applicationrunner未被调用之前，该方法被调用
 			listeners.started(context);
 			//调用ApplicationRunner，CommandLineRunner的运行方法
 			callRunners(context, applicationArguments);
@@ -407,6 +408,7 @@ public class SpringApplication {
 		//在context刷新之前，ApplicationContextInitializer初始化context
 		applyInitializers(context);
 		//通知监听器context准备完成，该方法以上 为上下文准备阶段，以下 为上下文加载阶段
+		//当applicationcontext构建完成，资源还未被加载时，该方法被调用
 		listeners.contextPrepared(context);
 		//打印日志，启动profile
 		if (this.logStartupInfo) {
@@ -441,9 +443,11 @@ public class SpringApplication {
 	}
 
 	private void refreshContext(ConfigurableApplicationContext context) {
+		//调用refresh方法
 		refresh(context);
 		if (this.registerShutdownHook) {
 			try {
+				//注册shutdownhook线程，实时销毁时的回调
 				context.registerShutdownHook();
 			}
 			catch (AccessControlException ex) {
@@ -542,6 +546,7 @@ public class SpringApplication {
 	 * @see #configureEnvironment(ConfigurableEnvironment, String[])
 	 */
 	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
+		//获取环境中的属性资源信息
 		MutablePropertySources sources = environment.getPropertySources();
 		//如果默认属性不为空，则将默认属性放在最后
 		if (this.defaultProperties != null && !this.defaultProperties.isEmpty()) {
@@ -560,7 +565,7 @@ public class SpringApplication {
 				sources.replace(name, composite);
 			}
 			else {
-				//如果默认资源中包含该命令，则放在第一位
+				//如果默认资源中不包含该命令，则放在第一位
 				sources.addFirst(new SimpleCommandLinePropertySource(args));
 			}
 		}
@@ -682,9 +687,11 @@ public class SpringApplication {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void applyInitializers(ConfigurableApplicationContext context) {
 		for (ApplicationContextInitializer initializer : getInitializers()) {
+			//解析当前initializer实现的ApplicationContextInitializer的泛型参数
 			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
 					ApplicationContextInitializer.class);
 			Assert.isInstanceOf(requiredType, context, "Unable to call initializer.");
+			//初始化context
 			initializer.initialize(context);
 		}
 	}
@@ -750,6 +757,7 @@ public class SpringApplication {
 		if (this.environment != null) {
 			loader.setEnvironment(this.environment);
 		}
+		//BeanDefinitionLoader支持Class，Resource,package,charsquence
 		loader.load();
 	}
 
@@ -1233,6 +1241,7 @@ public class SpringApplication {
 	 * Returns read-only ordered Set of the {@link ApplicationContextInitializer}s that
 	 * will be applied to the Spring {@link ApplicationContext}.
 	 * @return the initializers
+	 * 对ApplicationContextInitializer集合进行排序
 	 */
 	public Set<ApplicationContextInitializer<?>> getInitializers() {
 		return asUnmodifiableOrderedSet(this.initializers);

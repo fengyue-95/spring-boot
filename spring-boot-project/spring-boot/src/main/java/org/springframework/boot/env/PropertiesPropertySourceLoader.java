@@ -42,22 +42,37 @@ public class PropertiesPropertySourceLoader implements PropertySourceLoader {
 		return new String[] { "properties", "xml" };
 	}
 
+	/**
+	 * 加载指定配置文件
+	 * @param name the root name of the property source. If multiple documents are loaded
+	 * an additional suffix should be added to the name for each source loaded.
+	 * @param resource the resource to load
+	 * @return
+	 * @throws IOException
+	 */
 	@Override
 	public List<PropertySource<?>> load(String name, Resource resource) throws IOException {
+		//调用load方法进行加载并返回map形式的数据
 		Map<String, ?> properties = loadProperties(resource);
 		if (properties.isEmpty()) {
 			return Collections.emptyList();
 		}
+		//对返回结果进行处理和转换
 		return Collections
 				.singletonList(new OriginTrackedMapPropertySource(name, Collections.unmodifiableMap(properties), true));
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
+	/**
+	 * 具体加载过程
+	 */
 	private Map<String, ?> loadProperties(Resource resource) throws IOException {
 		String filename = resource.getFilename();
+		//加载xml格式
 		if (filename != null && filename.endsWith(XML_FILE_EXTENSION)) {
 			return (Map) PropertiesLoaderUtils.loadProperties(resource);
 		}
+		//加载properties格式
 		return new OriginTrackedPropertiesLoader(resource).load();
 	}
 

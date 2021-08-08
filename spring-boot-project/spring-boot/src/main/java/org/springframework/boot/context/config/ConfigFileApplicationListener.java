@@ -107,8 +107,10 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 	private static final String DEFAULT_PROPERTIES = "defaultProperties";
 
 	// Note the order is from least to most specific (last one wins)
+	//默认的加载配置文件路径
 	private static final String DEFAULT_SEARCH_LOCATIONS = "classpath:/,classpath:/config/,file:./,file:./config/";
 
+	//默认配置文件名称
 	private static final String DEFAULT_NAMES = "application";
 
 	private static final Set<String> NO_SEARCH_NAMES = Collections.singleton(null);
@@ -128,6 +130,7 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 
 	/**
 	 * The "active profiles" property name.
+	 * 激活配置文件的属性名
 	 */
 	public static final String ACTIVE_PROFILES_PROPERTY = "spring.profiles.active";
 
@@ -172,6 +175,7 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
+		//对应前面发布的事件，执行此业务逻辑
 		if (event instanceof ApplicationEnvironmentPreparedEvent) {
 			onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);
 		}
@@ -184,6 +188,7 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 		List<EnvironmentPostProcessor> postProcessors = loadPostProcessors();
 		postProcessors.add(this);
 		AnnotationAwareOrderComparator.sort(postProcessors);
+		//遍历并依次调用其postProcessEnvironment方法
 		for (EnvironmentPostProcessor postProcessor : postProcessors) {
 			postProcessor.postProcessEnvironment(event.getEnvironment(), event.getSpringApplication());
 		}
@@ -320,24 +325,37 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 		}
 
 		void load() {
+			//过滤符合条件的properties
 			FilteredPropertySource.apply(this.environment, DEFAULT_PROPERTIES, LOAD_FILTERED_PROPERTY,
 					(defaultProperties) -> {
+						//创建默认的profile双队列
 						this.profiles = new LinkedList<>();
+						//创建默认的已处理的profile列表
 						this.processedProfiles = new LinkedList<>();
+						//默认设置为未激活
 						this.activatedProfiles = false;
+						//创建key，值为mutablepropertysource的默认map，注意是有序的map
 						this.loaded = new LinkedHashMap<>();
+						//加载配置profile信息，默认为default
 						initializeProfiles();
+						//遍历profiles，并加载解析
 						while (!this.profiles.isEmpty()) {
 							Profile profile = this.profiles.poll();
+							//非默认的profile则加入
 							if (isDefaultProfile(profile)) {
 								addProfileToEnvironment(profile.getName());
 							}
+							//解析处理profile
 							load(profile, this::getPositiveProfileFilter,
 									addToLoaded(MutablePropertySources::addLast, false));
+							//已处理过的放入对应的列表
 							this.processedProfiles.add(profile);
 						}
+						//再次加载profile为null的配置，将其放置在loaded的最前面
 						load(null, this::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addFirst, true));
+						//添加加载的propertysource
 						addLoadedPropertySources();
+						//过滤并添加defaultproperties到processedProfiles和环境中
 						applyActiveProfiles(defaultProperties);
 					});
 		}
@@ -350,16 +368,25 @@ public class ConfigFileApplicationListener implements EnvironmentPostProcessor, 
 		private void initializeProfiles() {
 			// The default profile for these purposes is represented as null. We add it
 			// first so that it is processed first and has lowest priority.
+			//首先添加default profile，确保首先被执行，并且优先级最低
 			this.profiles.add(null);
+			//查找环境中spring.profiles.active属性配置的profile
 			Set<Profile> activatedViaProperty = getProfilesFromProperty(ACTIVE_PROFILES_PROPERTY);
+			//查找环境中spring.profiles.include属性配置的profile
 			Set<Profile> includedViaProperty = getProfilesFromProperty(INCLUDE_PROFILES_PROPERTY);
+			//查找环境中除以上两类之外的其他属性配置的profile
 			List<Profile> otherActiveProfiles = getOtherActiveProfiles(activatedViaProperty, includedViaProperty);
+			//其他属性配置的profile添加到profiles队列中
 			this.profiles.addAll(otherActiveProfiles);
 			// Any pre-existing active profiles set via property sources (e.g.
 			// System properties) take precedence over those added in config files.
+			//将included属性添加到队列中
 			this.profiles.addAll(includedViaProperty);
+			//将activatedViaProperty添加到profiles队列中，并设置activatedProfiles为激活状态
 			addActiveProfiles(activatedViaProperty);
+			//如果没有任何profile配置，也就是默认是添加了一个null，则执行内部逻辑
 			if (this.profiles.size() == 1) { // only has null profile
+				//AbstractEnvironment中有默认的default属性，则将default profile添加到profiles中
 				for (String defaultProfileName : this.environment.getDefaultProfiles()) {
 					Profile defaultProfile = new Profile(defaultProfileName, true);
 					this.profiles.add(defaultProfile);
